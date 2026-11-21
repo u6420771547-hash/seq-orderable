@@ -1,0 +1,204 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{hyperref}
+\usepackage[margin=1in]{geometry}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{conjecture}[theorem]{Conjecture}
+
+\title{Every Proper Edge Colouring of a Connected Graph Other Than $K_2$ or an Even Cycle is Sequentially Orderable}
+\author{Casey Zhang\\
+\small Independent Researcher\\
+\small \texttt{u6170252806@gmail.com}}
+\date{November 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+In the sequence variant of the 1-2-3 Conjecture, an edge colouring $w : E(G) \to \mathcal{C}$ and a strict total order $\prec$ on $E(G)$ induce at each vertex $v \in V(G)$ the sequence $f_\prec(v) = (w(e_1), \dots, w(e_{d(v)}))$ of incident edge colours ordered according to $\prec$. A proper edge colouring $w$ is called \emph{sequentially orderable} if there exists a strict total order $\prec$ on $E(G)$ such that $f_\prec$ is a proper vertex colouring. Gorzkowska and Kwa\'sny (2026) proved that every proper edge colouring of a connected non-regular graph, a connected graph with a cut-vertex, a connected Class~2 graph, or a connected $d$-regular graph with $d \ge 6$ is sequentially orderable, leaving open proper $d$-edge-colourings of $2$-connected $d$-regular graphs for $d \in \{3, 4, 5\}$ and conjecturing that $K_2$ and proper $2$-edge-colourings of even cycles are the only connected obstructions.
+
+We prove this conjecture in full. Our proof is entirely deterministic and handles every proper edge colouring of every $2$-connected $d$-regular graph with $d \ge 3$ uniformly, replacing the previous probabilistic argument for $d \ge 6$. For $d \ge 4$, we defer $d-1$ edges incident with a fixed vertex $v$ into a final block and greedily order $G - v$, leaving $(d-1)! > d$ permutations at $v$. For $d = 3$, we establish a structural lemma showing that every $2$-connected cubic graph contains a $3$-vertex path $u_2 - v - u_3$ whose removal leaves a connected graph; partitioning the edges of $G - v$ incident with $\{u_2, u_3\}$ by colour ensures neither $u_2$ nor $u_3$ begins with the colour of the third edge at $v$, resolving the remaining bottleneck. The main theorem for all $2$-connected $d$-regular graphs ($d \ge 3$) has also been formally verified in Lean~4.
+\end{abstract}
+
+\noindent\textbf{MSC 2020:} 05C15, 05C22, 05C78.\\
+\textbf{Keywords:} 1-2-3 Conjecture, sequence variant, proper edge colouring, edge ordering, regular graphs, cubic graphs.
+
+\section{Introduction and Preliminaries}
+
+The 1-2-3 Conjecture, introduced by Karo\'nski, {\L}uczak, and Thomason~\cite{KLT2004} and resolved by Keusch~\cite{Keusch2024}, asserts that every graph without isolated edges admits an edge weighting from $\{1,2,3\}$ whose incident weight sums distinguish adjacent vertices. Among the many variants surveyed by Seamone~\cite{Seamone2012}, Seamone and Stevens~\cite{SS2013} proposed the \emph{sequence variant}: given a strict total order $\prec$ on $E(G)$ and an edge weighting $w : E(G) \to \mathcal{C}$, each vertex $v \in V(G)$ receives the sequence
+\[
+  f_\prec(v) = \bigl(w(e_1), w(e_2), \dots, w(e_{d_G(v)})\bigr),
+\]
+where $e_1 \prec e_2 \prec \dots \prec e_{d_G(v)}$ are all edges incident with $v$ in $G$.
+
+Recently, Gorzkowska and Kwa\'sny~\cite{GK2026} reversed the roles of the weighting and the edge order: fixing a proper edge colouring $w$ of a finite simple graph $G$, they call $w$ \emph{sequentially orderable} if there exists a strict total order $\prec$ on $E(G)$ such that $f_\prec(x) \neq f_\prec(y)$ for every edge $xy \in E(G)$. Clearly, no edge colouring of $K_2$ is sequentially orderable, and no proper $2$-edge-colouring of an even cycle $C_{2k}$ is sequentially orderable (both endpoints of the $\prec$-minimum edge receive the same $2$-term sequence). Gorzkowska and Kwa\'sny~\cite{GK2026} proved the following results:
+\begin{itemize}
+  \item Every proper edge colouring of a connected graph with a cut-vertex is sequentially orderable (\cite[Lemma~4]{GK2026}).
+  \item Every proper edge colouring of a connected graph containing two adjacent vertices with distinct sets of incident colours (palettes) is sequentially orderable (\cite[Theorem~5]{GK2026}); in particular, this covers all connected non-regular graphs and all connected Class~2 graphs (\cite[Corollaries~6 and~7]{GK2026}).
+  \item By an application of the symmetric Lov\'asz Local Lemma, every proper $d$-edge-colouring of a connected $d$-regular graph with $d \ge 6$ is sequentially orderable (\cite[Theorem~9]{GK2026}).
+\end{itemize}
+They left open the cases of proper $d$-edge-colourings of $2$-connected $d$-regular graphs for $d \in \{3, 4, 5\}$ and posed the following conjecture (\cite[Conjecture~10]{GK2026}).
+
+\begin{conjecture}[Gorzkowska and Kwa\'sny~\cite{GK2026}]
+\label{conj:gk}
+Let $G$ be a connected graph other than $K_2$ or an even cycle. Then every proper edge colouring of $G$ is sequentially orderable.
+\end{conjecture}
+
+Throughout this paper, all graphs are finite and simple; we follow standard graph-theoretic terminology~\cite{Diestel2016}. For a graph $G = (V, E)$ and $v \in V(G)$, we denote by $N_G(v)$ the neighbourhood of $v$, by $E_G(v)$ the set of edges incident with $v$, and by $d_G(v) = |E_G(v)|$ the degree of $v$. For $X \subseteq V(G)$, $G - X$ denotes the induced subgraph on $V(G) \setminus X$; we write $G - v$ for $G - \{v\}$. A graph $G$ is \emph{$2$-connected} if $|V(G)| \ge 3$ and $G - v$ is connected for every $v \in V(G)$.
+
+\section{Main Result}
+
+We prove Conjecture~\ref{conj:gk} by establishing the following deterministic theorem for all $2$-connected $d$-regular graphs with $d \ge 3$.
+
+\begin{theorem}
+\label{thm:regular}
+Let $d \ge 3$ be an integer, let $G$ be a $2$-connected $d$-regular simple graph, and let $w : E(G) \to \mathcal{C}$ be any proper edge colouring of $G$. Then $w$ is sequentially orderable.
+\end{theorem}
+
+Combined with the structural results of~\cite{GK2026}, Theorem~\ref{thm:regular} yields a complete resolution of Conjecture~\ref{conj:gk} (and in fact characterizes all sequentially orderable proper edge colourings of connected graphs).
+
+\begin{corollary}
+\label{cor:main}
+Let $G$ be a connected graph other than $K_2$ or an even cycle. Then every proper edge colouring of $G$ is sequentially orderable. More generally, a proper edge colouring $w$ of a connected graph $G$ fails to be sequentially orderable if and only if $G \cong K_2$ or $G$ is an even cycle and $|w(E(G))| = 2$.
+\end{corollary}
+
+\begin{proof}[Proof of Corollary~\ref{cor:main} from Theorem~\ref{thm:regular}]
+If $|V(G)| = 1$, then $E(G) = \emptyset$ and the statement holds vacuously. Assume $|V(G)| \ge 2$ and let $w$ be a proper edge colouring of $G$. If $G$ is not regular, $w$ is sequentially orderable by~\cite[Corollary~6]{GK2026}. Assume $G$ is $d$-regular. If $|w(E(G))| > d$, then since every vertex has palette size $d$ and $G$ is connected, some two adjacent vertices have distinct palettes, so $w$ is sequentially orderable by~\cite[Theorem~5]{GK2026}. Assume therefore that $|w(E(G))| = d$. If $d = 1$, then $G \cong K_2$. If $d = 2$, then $G$ is a cycle admitting a proper $2$-edge-colouring, hence an even cycle with $|w(E(G))| = 2$. If $d \ge 3$ and $G$ has a cut-vertex, then $w$ is sequentially orderable by~\cite[Lemma~4]{GK2026}. Otherwise $G$ is $2$-connected and $d$-regular with $d \ge 3$, so $w$ is sequentially orderable by Theorem~\ref{thm:regular}.
+\end{proof}
+
+\section{Proof of the Main Theorem}
+
+The core idea of the proof of Theorem~\ref{thm:regular} is to fix a vertex $v \in V(G)$ with neighbours $u_1, \dots, u_d$ and partition $E(G)$ into $(E(G - v) \cup \{v u_1\}) \sqcup B$, where $B = \{v u_2, \dots, v u_d\}$ is reserved as a \emph{final block} placed strictly after all remaining edges.
+
+\begin{lemma}[Final-Block Suffix Invariance]
+\label{lem:block}
+Let $G$ be a $d$-regular simple graph with $d \ge 3$, and let $w : E(G) \to \mathcal{C}$ be a proper edge colouring. Fix $v \in V(G)$, let $N_G(v) = \{u_1, \dots, u_d\}$, write $c_i = w(v u_i)$ for $1 \le i \le d$, and set $H = G - v$ and $B = \{v u_2, \dots, v u_d\}$.
+
+For any strict total order $\prec_0$ on $E(H) \cup \{v u_1\}$, define for each $x \in V(H)$ its \emph{prospective full sequence} $f^*_{\prec_0}(x)$ to be:
+\begin{itemize}
+  \item the sequence of colours of edges in $E(H) \cup \{v u_1\}$ incident with $x$ ordered by $\prec_0$, if $x \notin \{u_2, \dots, u_d\}$;
+  \item the sequence of colours of edges in $E(H)$ incident with $u_i$ ordered by $\prec_0$, followed by the colour $c_i$, if $x = u_i$ for some $i \in \{2, \dots, d\}$.
+\end{itemize}
+For every strict total order $\prec$ on $E(G)$ that extends $\prec_0$ and satisfies $e \prec b$ for all $e \in E(H) \cup \{v u_1\}$ and all $b \in B$:
+\begin{enumerate}
+  \item $f_\prec(x) = f^*_{\prec_0}(x)$ for every $x \in V(H)$ (independent of the ordering of $B$);
+  \item $f_\prec(v) = (c_1, w(b_1), \dots, w(b_{d-1}))$, where $b_1 \prec \dots \prec b_{d-1}$ lists $B$ in increasing order. In particular, the $(d-1)!$ possible orderings of $B$ yield $(d-1)!$ pairwise distinct sequences for $v$.
+\end{enumerate}
+\end{lemma}
+
+\begin{proof}
+Because $G$ is simple, $u_1, \dots, u_d$ are pairwise distinct. For $x \in V(H) \setminus \{u_2, \dots, u_d\}$, $E_G(x) \subseteq E(H) \cup \{v u_1\}$, so $f_\prec(x) = f^*_{\prec_0}(x)$. For $i \in \{2, \dots, d\}$, $E_G(u_i) = E_H(u_i) \sqcup \{v u_i\}$ and every edge of $E_H(u_i)$ precedes $v u_i$ under $\prec$, so $f_\prec(u_i)$ is the $\prec_0$-sequence on $E_H(u_i)$ with $w(v u_i) = c_i$ appended, which equals $f^*_{\prec_0}(u_i)$ regardless of how $B$ is ordered. Finally, $E_G(v) = \{v u_1\} \sqcup B$ with $v u_1 \prec b$ for all $b \in B$, giving $f_\prec(v) = (c_1, w(b_1), \dots, w(b_{d-1}))$. Since $w$ is proper, the colours $c_2, \dots, c_d$ on $B$ are pairwise distinct, so distinct orderings of $B$ yield distinct sequences for $v$.
+\end{proof}
+
+\begin{lemma}[Greedy Extension with Deferred Final Block]
+\label{lem:greedy}
+Under the notation of Lemma~\ref{lem:block}, let $n = |V(G)|$, let $m \in \{0, 1, \dots, n - 2\}$, and let $x_1, x_2, \dots, x_{n-1} = u_1$ be an ordering of $V(H)$ such that every vertex $x_k$ with $m + 1 \le k \le n - 2$ has at least one neighbour in $\{x_{k+1}, \dots, x_{n-1}\}$. Let $S_m$ be the set of all edges of $H$ having at least one endpoint in $\{x_1, \dots, x_m\}$, and suppose $\prec_m$ is a strict total order on $S_m$ such that $f^*_{\prec_m}(x_a) \neq f^*_{\prec_m}(x_b)$ for every edge $x_a x_b \in E(H)$ with $1 \le a < b \le m$.
+
+Then $\prec_m$ extends to a strict total order $\prec_0$ on $E(H) \cup \{v u_1\}$ such that $f^*_{\prec_0}(x_j) = f^*_{\prec_m}(x_j)$ for all $1 \le j \le m$, and $f^*_{\prec_0}(x) \neq f^*_{\prec_0}(y)$ for every edge $xy \in E(H)$.
+\end{lemma}
+
+\begin{proof}
+We construct strict total orders $\prec_k$ on $S_k$, the set of edges of $H$ incident with $\{x_1, \dots, x_k\}$, inductively for $k = m, m + 1, \dots, n - 2$, maintaining that $\prec_k$ extends $\prec_{k-1}$ and $f^*_{\prec_k}(x_a) \neq f^*_{\prec_k}(x_b)$ whenever $x_a x_b \in E(H)$ with $1 \le a < b \le k$. Note that for any $j \le k$, we have $E_H(x_j) \subseteq S_k$, so $f^*_{\prec_k}(x_j)$ is well-defined. The base case $k = m$ is given.
+
+Assume $m + 1 \le k \le n - 2$ and $(S_{k-1}, \prec_{k-1})$ has been constructed. Let $U_k = E_H(x_k) \setminus S_{k-1}$. By hypothesis, $x_k$ has a neighbour $x_r \in N_H(x_k)$ with $r > k$. Neither endpoint of $e^* = x_k x_r$ belongs to $\{x_1, \dots, x_{k-1}\}$, so $e^* \in U_k$. Insert all edges of $U_k \setminus \{e^*\}$ arbitrarily into $\prec_{k-1}$ to obtain a strict total order $\prec'$ on $S' = S_{k-1} \cup (U_k \setminus \{e^*\})$. Since $S_{k-1}$ already contains all edges of $H$ incident with $\{x_1, \dots, x_{k-1}\}$, no edge of $U_k$ is incident with any $x_j$ ($j < k$).
+
+Now $E_H(x_k) \setminus \{e^*\} \subseteq S'$ has size $t = d_H(x_k) - 1$. Since $d \ge 3$, every vertex of $H = G - v$ has $d_H(x) \ge d - 1 \ge 2$, so $t \ge 1$. List $E_H(x_k) \setminus \{e^*\}$ as $e'_1 \prec' \dots \prec' e'_t$. Inserting $e^*$ into $\prec'$ immediately before $e'_1$, immediately between $e'_s$ and $e'_{s+1}$ ($1 \le s \le t - 1$), or immediately after $e'_t$ yields $t + 1 = d_H(x_k)$ candidate orders extending $\prec'$. None of these insertions alters $f^*(x_j)$ for $1 \le j < k$. Because $w$ is proper, $w(e^*)$ is distinct from $w(e'_1), \dots, w(e'_t)$ (and from $w(v x_k)$ if $x_k \in \{u_2, \dots, u_d\}$); thus $w(e^*)$ appears at coordinate $1, 2, \dots, d_H(x_k)$, respectively, in the $d_H(x_k)$ resulting prospective full sequences of $x_k$, making them pairwise distinct. Since $x_r \in N_H(x_k)$ has $r > k$, at most $d_H(x_k) - 1$ neighbours of $x_k$ lie in $\{x_1, \dots, x_{k-1}\}$. By the pigeonhole principle, there is a slot yielding a strict total order $\prec_k$ on $S_k = S' \cup \{e^*\}$ with $f^*_{\prec_k}(x_k) \neq f^*_{\prec_k}(x_j)$ for every $x_j \in N_H(x_k) \cap \{x_1, \dots, x_{k-1}\}$.
+
+At $k = n - 2$, since $V(H) \setminus \{x_1, \dots, x_{n-2}\} = \{u_1\}$ and $H$ has no loops, we have $S_{n-2} = E(H)$. Finally, $E_H(u_1) \subseteq S_{n-2}$ has size $d_H(u_1) = d - 1 \ge 2$. Inserting $v u_1$ into the $d$ slots relative to the edges of $E_H(u_1)$ in $\prec_{n-2}$ leaves $f^*(y)$ unchanged for all $y \in V(H) \setminus \{u_1\}$ and yields $d$ pairwise distinct full sequences for $u_1$ (with colour $c_1 = w(v u_1)$ at coordinates $1, \dots, d$, respectively). Since $|N_H(u_1)| = d - 1 < d$, there exists a slot yielding a strict total order $\prec_0$ on $E(H) \cup \{v u_1\}$ such that $f^*_{\prec_0}(u_1) \neq f^*_{\prec_0}(y)$ for all $y \in N_H(u_1)$. Since $\prec_0$ extends $\prec_m$ and no edge added after step $m$ is incident with $\{x_1, \dots, x_m\}$, we also have $f^*_{\prec_0}(x_j) = f^*_{\prec_m}(x_j)$ for all $1 \le j \le m$.
+\end{proof}
+
+\subsection{Proof of Theorem~\ref{thm:regular} for $d \ge 4$}
+
+Choose any vertex $v \in V(G)$ and list $N_G(v) = \{u_1, \dots, u_d\}$. Because $G$ is $2$-connected, $H = G - v$ is connected. Let $T$ be a spanning tree of $H$ rooted at $u_1$, and order $V(H)$ as $x_1, \dots, x_{n-1} = u_1$ in non-increasing order of distance from $u_1$ in $T$, so that every $x_k$ ($1 \le k \le n - 2$) precedes its parent in $T$.
+
+Applying Lemma~\ref{lem:greedy} with $m = 0$ gives a strict total order $\prec_0$ on $E(H) \cup \{v u_1\}$ such that $f^*_{\prec_0}(x) \neq f^*_{\prec_0}(y)$ for every $xy \in E(H)$. By Lemma~\ref{lem:block}, the $(d - 1)!$ extensions of $\prec_0$ obtained by ordering $B = \{v u_2, \dots, v u_d\}$ after $E(H) \cup \{v u_1\}$ preserve $f_\prec(x) = f^*_{\prec_0}(x)$ for all $x \in V(H)$ and produce $(d - 1)!$ pairwise distinct sequences for $v$. For $d = 4$, $(4 - 1)! = 6 > 4$, and inductively for $d \ge 4$, if $(d - 1)! > d$ then $d! = d(d - 1)! > d^2 \ge 4d > d + 1$. Thus $(d - 1)! > d$ for all $d \ge 4$, so by the pigeonhole principle at least one ordering of $B$ satisfies $f_\prec(v) \notin \{f_\prec(u_1), \dots, f_\prec(u_d)\}$, distinguishing all edges of $G$. \qed
+
+\subsection{A Structural Lemma for $2$-Connected Cubic Graphs}
+
+For $d = 3$, $(d - 1)! = 2$ falls short of $d = 3$. To overcome this, we pre-fix the sequences of $u_2$ and $u_3$ using the following structural property of $2$-connected cubic graphs.
+
+\begin{lemma}[Non-Separating $P_3$ Lemma]
+\label{lem:p3}
+Every $2$-connected $3$-regular simple graph $G$ contains a $3$-vertex path $P = (u_2, v, u_3)$ such that $G - \{u_2, v, u_3\}$ is connected.
+\end{lemma}
+
+\begin{proof}
+Since $G$ is simple and $3$-regular, $|V(G)| \ge 4$, so $G - V(P)$ is nonempty for every $3$-vertex path $P$ in $G$. Suppose for contradiction that $G - V(P)$ is disconnected for every $3$-vertex path $P$ in $G$. Choose a $3$-vertex path $P = (a, b, c)$ (with $ab, bc \in E(G)$) and a connected component $C$ of $G - V(P)$ minimizing $|V(C)|$. Set $R = G - (V(C) \cup V(P))$; by assumption $V(R) \neq \emptyset$.
+
+First, observe that $G - V(C)$ is connected: its vertex set is $V(P) \cup V(R)$, the path $a - b - c$ connects $V(P)$, and every vertex of $V(R)$ lies in a connected component of $G - V(P)$ other than $C$, which must have an edge to $V(P)$ since $G$ is connected.
+
+Next, we show $|V(C)| \le 2$. If $|V(C)| \ge 3$, then any spanning tree of the connected graph $C$ has $|V(C)| - 1 \ge 2$ edges and hence contains two incident edges, forming a $3$-vertex path $P'$ with $V(P') \subseteq V(C)$. Then $G - V(C)$ is a connected subgraph of $G - V(P')$ and therefore lies inside a single connected component $D$ of $G - V(P')$. By hypothesis, $G - V(P')$ has another connected component $C' \neq D$. Because $V(C') \cap V(D) = \emptyset$ and $V(C') \cap V(P') = \emptyset$, we obtain $V(C') \subseteq V(C) \setminus V(P')$, so $|V(C')| \le |V(C)| - 3 < |V(C)|$, contradicting the minimality of $|V(C)|$.
+
+Hence $|V(C)| \in \{1, 2\}$.
+
+\medskip\noindent\textit{Case 1: $|V(C)| = 1$.} Write $V(C) = \{x\}$. Since $N_G(x) \subseteq \{a, b, c\}$ and $d_G(x) = 3$, we have $N_G(x) = \{a, b, c\}$. Thus $N_G(b) = \{a, c, x\}$, so $b$ has no neighbour in $R$. If $ac \in E(G)$, then $N_G(a) = \{b, c, x\}$ and $N_G(c) = \{a, b, x\}$, leaving no edges between $\{a, b, c, x\}$ and $V(R) \neq \emptyset$, contradicting connectivity of $G$. Hence $ac \notin E(G)$, and since $d_G(a) = d_G(c) = 3$, there exist unique neighbours $a' \in N_G(a) \cap V(R)$ and $c' \in N_G(c) \cap V(R)$ (possibly $a' = c'$). Thus $a a'$ and $c c'$ are the only edges between $V(R)$ and $\{a, b, c, x\}$.
+
+We claim $R$ is connected. Otherwise, let $R_1$ be the connected component of $R$ containing $a'$. If $c' \in V(R_1)$, then any other component of $R$ has no edge to $\{a, b, c, x\}$, contradicting connectivity of $G$. If $c' \notin V(R_1)$, then $a a'$ is the unique edge between $V(R_1)$ and $V(G) \setminus V(R_1)$, so $G - \{a\}$ disconnects $R_1$ from $\{b, c, x\}$, contradicting $2$-connectivity of $G$. Thus $R$ is connected. Now consider the $3$-vertex path $P' = (x, b, c)$. Since $V(G - V(P')) = V(R) \cup \{a\}$ and $a$ is adjacent to $a' \in V(R)$, the graph $G - V(P')$ is connected, a contradiction.
+
+\medskip\noindent\textit{Case 2: $|V(C)| = 2$.} Write $V(C) = \{x, y\}$ with $xy \in E(G)$. Because $G$ is simple and $3$-regular, each of $x$ and $y$ has exactly $2$ neighbours in $\{a, b, c\}$. Let $e_a, e_b, e_c$ be the numbers of edges from $a, b, c$, respectively, into $\{x, y\}$. Then $e_a + e_b + e_c = 4$, with $e_a, e_c \le 2$ (simplicity) and $e_b \le 1$ (since $a, c \in N_G(b)$ and $d_G(b) = 3$).
+\begin{itemize}
+  \item If $e_b = 0$, then $e_a = e_c = 2$, so $N_G(a) = N_G(c) = \{b, x, y\}$. No vertex in $\{a, c, x, y\}$ has a neighbour in $V(R) \neq \emptyset$, so $G - \{b\}$ disconnects $\{a, c, x, y\}$ from $V(R)$, contradicting $2$-connectivity of $G$.
+  \item If $e_b = 1$, assume without loss of generality that $bx \in E(G)$ (so $N_G(b) = \{a, c, x\}$) and $e_a = 2$, $e_c = 1$. Then $N_G(a) = \{b, x, y\}$, forcing $N_G(x) = \{a, b, y\}$. Hence the unique edge from $c$ into $\{x, y\}$ must be $cy$, giving $N_G(y) = \{a, c, x\}$. Now no vertex in $\{a, b, x, y\}$ has a neighbour in $V(R) \neq \emptyset$, so $G - \{c\}$ disconnects $\{a, b, x, y\}$ from $V(R)$, contradicting $2$-connectivity of $G$.
+\end{itemize}
+All cases yield contradictions, completing the proof.
+\end{proof}
+
+\subsection{Proof of Theorem~\ref{thm:regular} for $d = 3$}
+
+By Lemma~\ref{lem:p3}, choose a $3$-vertex path $u_2 - v - u_3$ in $G$ such that $K = G - \{v, u_2, u_3\}$ is connected. Let $u_1 \in V(K)$ be the third neighbour of $v$, and write $c_i = w(v u_i)$ for $i \in \{1, 2, 3\}$; since $w$ is proper, $c_1, c_2, c_3$ are pairwise distinct. Set $H = G - v$ and $B = \{v u_2, v u_3\}$.
+
+Let $T_K$ be a spanning tree of $K$ rooted at $u_1$, and order $V(K)$ as $x_3, \dots, x_{n-1} = u_1$ in non-increasing order of depth in $T_K$ (when $G \cong K_4$, we have $n = 4$ and $V(K) = \{x_3\} = \{u_1\}$). Set $x_1 = u_2$ and $x_2 = u_3$, and let $S_2 = E_H(u_2) \cup E_H(u_3)$.
+
+Partition $S_2$ into $S_2^{\neq} = \{e \in S_2 : w(e) \neq c_1\}$ and $S_2^{=} = \{e \in S_2 : w(e) = c_1\}$, and fix any strict total order $\prec_2$ on $S_2$ in which every edge of $S_2^{\neq}$ precedes every edge of $S_2^{=}$. We observe two properties of $\prec_2$:
+\begin{enumerate}
+  \item For each $i \in \{2, 3\}$, vertex $u_i$ has two distinct incident edges in $E_H(u_i) \subseteq S_2$. Since $w$ is proper, at most one of them has colour $c_1$, so at least one belongs to $S_2^{\neq}$ and therefore precedes any edge of $S_2^{=}$. Consequently, the first entry of $f^*_{\prec_2}(u_i)$ is distinct from $c_1$.
+  \item The final entries of $f^*_{\prec_2}(u_2)$ and $f^*_{\prec_2}(u_3)$ are $c_2$ and $c_3$, respectively. Because $c_2 \neq c_3$, we have $f^*_{\prec_2}(u_2) \neq f^*_{\prec_2}(u_3)$.
+\end{enumerate}
+Property~(2) verifies the base hypothesis of Lemma~\ref{lem:greedy} for $m = 2$ (regardless of whether $u_2 u_3 \in E(H)$). Every $x_k$ with $3 \le k \le n - 2$ precedes its parent in $T_K$, so Lemma~\ref{lem:greedy} extends $\prec_2$ to a strict total order $\prec_0$ on $E(H) \cup \{v u_1\}$ such that $f^*_{\prec_0}(x) \neq f^*_{\prec_0}(y)$ for every $xy \in E(H)$, while preserving $f^*_{\prec_0}(u_2) = f^*_{\prec_2}(u_2)$ and $f^*_{\prec_0}(u_3) = f^*_{\prec_2}(u_3)$.
+
+Finally, consider the two extensions $\prec$ of $\prec_0$ placing $B = \{v u_2, v u_3\}$ after $E(H) \cup \{v u_1\}$: setting $v u_2 \prec v u_3$ yields $f_\prec(v) = (c_1, c_2, c_3)$, whereas setting $v u_3 \prec v u_2$ yields $f_\prec(v) = (c_1, c_3, c_2)$. These two sequences are distinct since $c_2 \neq c_3$, and both begin with $c_1$. By Lemma~\ref{lem:block}, every edge of $H$ remains distinguished, and by Property~(1) neither $f_\prec(u_2) = f^*_{\prec_2}(u_2)$ nor $f_\prec(u_3) = f^*_{\prec_2}(u_3)$ begins with $c_1$, so neither lies in $\{(c_1, c_2, c_3), (c_1, c_3, c_2)\}$. Since $f_\prec(u_1)$ can coincide with at most one of $(c_1, c_2, c_3)$ and $(c_1, c_3, c_2)$, choosing the other ordering of $B$ guarantees $f_\prec(v) \notin \{f_\prec(u_1), f_\prec(u_2), f_\prec(u_3)\}$. Hence $\prec$ distinguishes all adjacent vertices of $G$. \qed
+
+\section{Concluding Remarks and Open Directions}
+
+Theorem~\ref{thm:regular} and Corollary~\ref{cor:main} completely settle Conjecture~10 of Gorzkowska and Kwa\'sny~\cite{GK2026}. Beyond resolving the remaining cases $d \in \{3, 4, 5\}$, the proof is completely constructive and yields a polynomial-time deterministic algorithm for finding a distinguishing edge order for any proper edge colouring of any connected graph other than $K_2$ or a $2$-coloured even cycle.
+
+As an additional verification safeguard, Theorem~\ref{thm:regular} (covering Lemmas~\ref{lem:block}--\ref{lem:p3}, both cases $d = 3$ and $d \ge 4$, and the arbitrary-colouring formulation) has been formally verified in Lean~4 (v4.36.0) as a standalone, dependency-free proof file (\texttt{SeqOrderable.lean}) with zero \texttt{sorry} placeholders and relying only on Lean's standard core axioms (\texttt{propext}, \texttt{Classical.choice}, \texttt{Quot.sound}). The formalization and a reference Python implementation of the constructive algorithm are publicly available at \url{https://github.com/u6420771547-hash/seq}.
+
+Several natural directions remain open:
+\begin{enumerate}
+  \item \emph{Multigraphs and non-proper edge colourings:} To what extent can the properness hypothesis be relaxed (for instance, bounding the maximum monochromatic degree at each vertex) while preserving sequential orderability?
+  \item \emph{Total distinguishing:} Instead of distinguishing only adjacent vertices, under what conditions does a fixed proper edge colouring admit a global edge order making $f_\prec$ injective on $V(G)$ (a sequence analogue of the irregularity strength)?
+  \item \emph{Algorithmic complexity of constrained orders:} Can a distinguishing edge order always be computed in linear time $O(|V| + |E|)$, and what is the complexity of deciding sequential orderability when the input edge weighting is arbitrary (non-proper)?
+\end{enumerate}
+
+\section*{Disclosure of AI Assistance}
+
+Generative AI assistance (Google Gemini) was used during literature exploration, proof ideation, Lean~4 formalization, and manuscript drafting. All mathematical definitions, proofs, and formal statements were reviewed and verified by the author, who takes full responsibility for the content of this paper.
+
+\begin{thebibliography}{9}
+\bibitem{Diestel2016}
+R.~Diestel, \emph{Graph Theory}, 5th ed., Graduate Texts in Mathematics, vol.~173, Springer, 2016.
+
+\bibitem{GK2026}
+A.~Gorzkowska and J.~Kwa\'sny, \emph{Distinguishing adjacent vertices by ordering edges}, preprint, arXiv:2609.11832 [math.CO], 2026.
+
+\bibitem{KLT2004}
+M.~Karo\'nski, T.~{\L}uczak, and A.~Thomason, \emph{Edge weights and vertex colours}, J.~Combin. Theory Ser.~B \textbf{91} (2004), no.~1, 151--157.
+
+\bibitem{Keusch2024}
+R.~Keusch, \emph{A solution to the 1-2-3 conjecture}, J.~Combin. Theory Ser.~B \textbf{166} (2024), 183--202.
+
+\bibitem{Seamone2012}
+B.~Seamone, \emph{The 1-2-3 Conjecture and related problems: a survey}, preprint, arXiv:1211.5122 [math.CO], 2012.
+
+\bibitem{SS2013}
+B.~Seamone and B.~Stevens, \emph{Sequence variations of the 1-2-3 conjecture and irregularity strength}, Discrete Math. Theor. Comput. Sci. \textbf{15} (2013), no.~1, 15--28.
+\end{thebibliography}
+
+\end{document}

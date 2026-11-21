@@ -1,0 +1,16 @@
+# Cached external files
+source_2609_11832.html
+
+# LaTeX build artifacts
+*.aux
+*.log
+*.out
+*.toc
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+
+# OS / Python artifacts
+.DS_Store
+__pycache__/
+*.pyc
