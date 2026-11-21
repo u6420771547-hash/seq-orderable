@@ -85,6 +85,7 @@ tectonic paper.tex
 ## Disclosure of AI Assistance
 
 Generative AI assistance (Google Gemini) was used during literature exploration, proof ideation, Lean 4 formalization, and manuscript drafting. All mathematical definitions, proofs, and formal statements were reviewed and verified by the author, who takes full responsibility for this work.
-## Disclosure of AI Assistance
 
-Generative AI assistance (Google Gemini) was used during literature exploration, proof ideation, Lean 4 formalization, and manuscript drafting. All mathematical definitions, proofs, and formal statements were reviewed and verified by the author.
+## License
+
+The Lean 4 formalization and Python reference implementation are released under the MIT License (see `LICENSE`).
